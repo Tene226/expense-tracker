@@ -1,0 +1,27 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(node -e \"const { DatabaseSync } = require\\('node:sqlite'\\); console.log\\('node:sqlite OK'\\);\")",
+      "Bash(Remove-Item -Recurse -Force node_modules -ErrorAction SilentlyContinue)",
+      "Bash(mkdir -p ../data)",
+      "Bash(node -e ' *)",
+      "Bash(NODE_ENV=development PORT=3001 DB_PATH=../data/test.db node -e 'const db = require\\(\"./db\"\\); const s = db.prepare\\(\"INSERT INTO expenses \\(amount, category, note, date\\) VALUES \\(?, ?, ?, ?\\)\"\\); const r = s.run\\(2500, \"alimentation\", \"test\", \"2026-05-03T12:00:00.000Z\"\\); console.log\\(\"insert OK, id:\", r.lastInsertRowid\\); const row = db.prepare\\(\"SELECT * FROM expenses WHERE id = ?\"\\).get\\(Number\\(r.lastInsertRowid\\)\\); console.log\\(\"select OK:\", JSON.stringify\\(row\\)\\);')",
+      "Bash(npx vite *)",
+      "Bash(node -e \"const v = require\\('./vite.config.js'\\); console.log\\(JSON.stringify\\(v\\)\\)\")",
+      "Bash(netstat -ano)",
+      "Bash(taskkill /F /PID 23712)",
+      "PowerShell(Stop-Process -Id 23712 -Force)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" -H \"Host: test.ngrok-free.app\" http://localhost:5173/)",
+      "Bash(python3 \"C:/Users/arnol/.claude/skills/ui-ux-pro-max/scripts/search.py\" \"personal finance expense tracker mobile PWA minimalist\" --design-system -p \"Budget Personnel\")",
+      "Bash(python3 \"C:/Users/arnol/.claude/skills/ui-ux-pro-max/scripts/search.py\" \"mobile finance app bottom nav cards clean\" --domain style -n 3)",
+      "Bash(python3 \"C:/Users/arnol/.claude/skills/ui-ux-pro-max/scripts/search.py\" \"fintech personal finance\" --domain color -n 2)",
+      "Bash(python3 \"C:/Users/arnol/.claude/skills/ui-ux-pro-max/scripts/search.py\" \"Inter modern clean sans-serif\" --domain typography -n 2)",
+      "PowerShell(Get-ChildItem -Path \"c:\\\\Users\\\\arnol\\\\Desktop\\\\CLAUDE\\\\Budget Personnel\" -Recurse -File | Select-Object FullName | Sort-Object FullName | ForEach-Object { $_.FullName })",
+      "PowerShell(Get-ChildItem -Path \"c:\\\\Users\\\\arnol\\\\Desktop\\\\CLAUDE\\\\Budget Personnel\" -Recurse -File | Where-Object { $_.FullName -notmatch \"node_modules\" } | Select-Object FullName | Sort-Object FullName | ForEach-Object { $_.FullName })",
+      "Bash(git -C \"c:\\\\Users\\\\arnol\\\\Desktop\\\\CLAUDE\\\\Budget Personnel\" status)",
+      "Bash(git init *)",
+      "Bash(git add *)",
+      "Bash(git commit *)"
+    ]
+  }
+}
