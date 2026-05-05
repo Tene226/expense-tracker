@@ -4,7 +4,7 @@ const db = require('../db');
 
 const ACCOUNT_TYPES = ['bank', 'mobile_money', 'cash', 'other'];
 
-function getAccountsWithBalance() {
+function getAccountsWithBalance(userId) {
   return db.prepare(`
     SELECT
       a.*,
@@ -13,16 +13,18 @@ function getAccountsWithBalance() {
         - COALESCE((SELECT SUM(e.amount) FROM expenses e WHERE e.account_id = a.id), 0)
         - COALESCE((SELECT SUM(t.amount) FROM transfers t WHERE t.from_account_id = a.id), 0)
         + COALESCE((SELECT SUM(t.amount) FROM transfers t WHERE t.to_account_id = a.id), 0)
+        + COALESCE((SELECT SUM(i.amount) FROM income i WHERE i.account_id = a.id), 0)
       , 2) AS balance
     FROM accounts a
+    WHERE a.user_id = ?
     ORDER BY a.created_at ASC
-  `).all();
+  `).all(userId);
 }
 
 // ── Comptes ────────────────────────────────────────────────────────────────
 
 router.get('/', (req, res) => {
-  res.json(getAccountsWithBalance());
+  res.json(getAccountsWithBalance(req.user.id));
 });
 
 router.post('/', (req, res) => {
@@ -35,16 +37,16 @@ router.post('/', (req, res) => {
   }
 
   const result = db.prepare(`
-    INSERT INTO accounts (name, type, balance_initial, color)
-    VALUES (?, ?, ?, ?)
-  `).run(name.trim(), type || 'other', balance_initial ?? 0, color || '#5F5E5A');
+    INSERT INTO accounts (user_id, name, type, balance_initial, color)
+    VALUES (?, ?, ?, ?, ?)
+  `).run(req.user.id, name.trim(), type || 'other', balance_initial ?? 0, color || '#5F5E5A');
 
-  const created = getAccountsWithBalance().find(a => a.id === Number(result.lastInsertRowid));
+  const created = getAccountsWithBalance(req.user.id).find(a => a.id === Number(result.lastInsertRowid));
   res.status(201).json(created);
 });
 
 router.put('/:id', (req, res) => {
-  const account = db.prepare('SELECT * FROM accounts WHERE id = ?').get(req.params.id);
+  const account = db.prepare('SELECT * FROM accounts WHERE id = ? AND user_id = ?').get(req.params.id, req.user.id);
   if (!account) return res.status(404).json({ error: 'Compte non trouvé' });
 
   const { name, type, balance_initial, color } = req.body;
@@ -65,12 +67,12 @@ router.put('/:id', (req, res) => {
     req.params.id
   );
 
-  const updated = getAccountsWithBalance().find(a => a.id === Number(req.params.id));
+  const updated = getAccountsWithBalance(req.user.id).find(a => a.id === Number(req.params.id));
   res.json(updated);
 });
 
 router.delete('/:id', (req, res) => {
-  const account = db.prepare('SELECT * FROM accounts WHERE id = ?').get(req.params.id);
+  const account = db.prepare('SELECT * FROM accounts WHERE id = ? AND user_id = ?').get(req.params.id, req.user.id);
   if (!account) return res.status(404).json({ error: 'Compte non trouvé' });
 
   const expCount = db.prepare('SELECT COUNT(*) as n FROM expenses WHERE account_id = ?').get(req.params.id).n;
@@ -96,15 +98,16 @@ router.get('/transfers', (req, res) => {
       fa.name as from_name, fa.color as from_color,
       ta.name as to_name,   ta.color as to_color
     FROM transfers t
-    JOIN accounts fa ON fa.id = t.from_account_id
-    JOIN accounts ta ON ta.id = t.to_account_id
+    JOIN accounts fa ON fa.id = t.from_account_id AND fa.user_id = ?
+    JOIN accounts ta ON ta.id = t.to_account_id AND ta.user_id = ?
     ORDER BY t.date DESC, t.created_at DESC
-  `).all();
+  `).all(req.user.id, req.user.id);
   res.json(rows);
 });
 
 router.post('/transfers', (req, res) => {
   const { from_account_id, to_account_id, amount, note, date } = req.body;
+  const userId = req.user.id;
 
   if (!from_account_id || !to_account_id) {
     return res.status(400).json({ error: 'Comptes source et destination requis' });
@@ -119,10 +122,10 @@ router.post('/transfers', (req, res) => {
     return res.status(400).json({ error: 'date invalide (ISO 8601 attendu)' });
   }
 
-  if (!db.prepare('SELECT id FROM accounts WHERE id = ?').get(from_account_id)) {
+  if (!db.prepare('SELECT id FROM accounts WHERE id = ? AND user_id = ?').get(from_account_id, userId)) {
     return res.status(404).json({ error: 'Compte source non trouvé' });
   }
-  if (!db.prepare('SELECT id FROM accounts WHERE id = ?').get(to_account_id)) {
+  if (!db.prepare('SELECT id FROM accounts WHERE id = ? AND user_id = ?').get(to_account_id, userId)) {
     return res.status(404).json({ error: 'Compte destination non trouvé' });
   }
 
@@ -145,8 +148,16 @@ router.post('/transfers', (req, res) => {
 });
 
 router.delete('/transfers/:id', (req, res) => {
-  const result = db.prepare('DELETE FROM transfers WHERE id = ?').run(req.params.id);
-  if (result.changes === 0) return res.status(404).json({ error: 'Virement non trouvé' });
+  // Ensure transfer belongs to user via accounts
+  const transfer = db.prepare(`
+    SELECT t.id FROM transfers t
+    JOIN accounts fa ON fa.id = t.from_account_id AND fa.user_id = ?
+    WHERE t.id = ?
+  `).get(req.user.id, req.params.id);
+
+  if (!transfer) return res.status(404).json({ error: 'Virement non trouvé' });
+
+  db.prepare('DELETE FROM transfers WHERE id = ?').run(req.params.id);
   res.json({ success: true });
 });
 

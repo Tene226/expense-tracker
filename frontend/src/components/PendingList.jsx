@@ -1,13 +1,13 @@
 import PendingCard from './PendingCard';
+import { LG } from '../styles/tokens';
+import { SectionHeader } from './Glass';
 
-export default function PendingList({ pending, onConfirm, onReject, accounts = [] }) {
+export default function PendingList({ pending, onConfirm, onReject, accounts = [], categories }) {
   if (!pending.length) return null;
 
   return (
-    <div className="flex flex-col gap-3 mb-5">
-      <p className="text-[10px] font-semibold text-amber-600 uppercase tracking-widest">
-        En attente · {pending.length}
-      </p>
+    <div style={{ marginBottom: 8 }}>
+      <SectionHeader>{pending.length} en attente</SectionHeader>
       {pending.map(item => (
         <PendingCard
           key={item.id}
@@ -15,6 +15,7 @@ export default function PendingList({ pending, onConfirm, onReject, accounts = [
           onConfirm={onConfirm}
           onReject={onReject}
           accounts={accounts}
+          categories={categories}
         />
       ))}
     </div>

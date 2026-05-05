@@ -1,27 +1,16 @@
-import { CATEGORIES } from './AddExpense';
+import { DEFAULT_CATEGORIES } from '../hooks/useCategories';
 import PendingList from './PendingList';
-
-function fmt(n) {
-  return n.toLocaleString('fr-FR') + ' FCFA';
-}
+import { LG, getCatColor, glassStyle } from '../styles/tokens';
+import { Gleam, SectionHeader } from './Glass';
 
 function formatDateGroup(isoDate) {
   const d = new Date(isoDate + 'T00:00:00');
   const today = new Date();
   const yesterday = new Date(today);
   yesterday.setDate(yesterday.getDate() - 1);
-
   if (d.toDateString() === today.toDateString()) return "Aujourd'hui";
   if (d.toDateString() === yesterday.toDateString()) return 'Hier';
-  return d.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
-}
-
-function getCatColor(id) {
-  return CATEGORIES.find(c => c.id === id)?.color || '#5F5E5A';
-}
-
-function getCatLabel(id) {
-  return CATEGORIES.find(c => c.id === id)?.label || id;
+  return d.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' });
 }
 
 function groupByDate(expenses) {
@@ -36,7 +25,7 @@ function groupByDate(expenses) {
   return Object.entries(groups);
 }
 
-export default function History({ expenses, pending, accounts = [], month, onMonthChange, onDelete, onConfirm, onReject, loading }) {
+function buildMonthOptions() {
   const months = [];
   const now = new Date();
   for (let i = 0; i < 12; i++) {
@@ -45,106 +34,113 @@ export default function History({ expenses, pending, accounts = [], month, onMon
     const label = d.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
     months.push({ val, label });
   }
+  return months;
+}
 
+export default function History({ expenses, pending, accounts = [], categories = DEFAULT_CATEGORIES, month, onMonthChange, onDelete, onConfirm, onReject, loading }) {
+  const months = buildMonthOptions();
   const grouped = groupByDate(expenses);
-  const total = expenses.reduce((acc, e) => acc + e.amount, 0);
+
+  function getCatLabel(id) {
+    return categories.find(c => c.id === id)?.label || id;
+  }
+  function catColor(id) {
+    return getCatColor(id) || categories.find(c => c.id === id)?.color || LG.tint;
+  }
 
   return (
-    <div className="flex flex-col pb-6">
-      {/* Header */}
-      <div className="px-5 pt-5 pb-4">
-        <p className="text-[10px] font-semibold text-zinc-400 uppercase tracking-widest mb-1">Historique</p>
-        <div className="flex items-start justify-between mt-1">
-          <select
-            value={month}
-            onChange={e => onMonthChange(e.target.value)}
-            className="text-2xl font-bold text-[#0A0A0A] bg-transparent border-none outline-none appearance-none cursor-pointer capitalize -ml-0.5"
-          >
-            {months.map(m => (
-              <option key={m.val} value={m.val}>{m.label}</option>
-            ))}
-          </select>
-
-          {expenses.length > 0 && (
-            <div className="text-right flex-shrink-0 ml-4">
-              <p className="text-[11px] text-zinc-400 mb-0.5">{expenses.length} dépense{expenses.length > 1 ? 's' : ''}</p>
-              <p className="text-lg font-bold tabular-nums text-[#0A0A0A]">{fmt(total)}</p>
-            </div>
-          )}
-        </div>
+    <div style={{ display: 'flex', flexDirection: 'column', padding: '0 16px' }}>
+      {/* Header row */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '12px 0 8px' }}>
+        <span style={{ fontFamily: '-apple-system, system-ui', fontSize: 20, fontWeight: 700, color: LG.textPrimary, flex: 1, letterSpacing: '-0.04em' }}>
+          Historique
+        </span>
+        <select
+          value={month}
+          onChange={e => onMonthChange(e.target.value)}
+          style={{
+            height: 30, padding: '0 10px',
+            background: 'rgba(255,255,255,0.08)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
+            border: '1px solid rgba(255,255,255,0.12)', borderRadius: 10,
+            color: LG.textPrimary, fontFamily: '-apple-system, system-ui', fontSize: 12,
+            outline: 'none', appearance: 'none', WebkitAppearance: 'none', cursor: 'pointer',
+          }}
+        >
+          {months.map(m => <option key={m.val} value={m.val}>{m.label}</option>)}
+        </select>
       </div>
 
       {/* Pending */}
-      <div className="px-5">
-        <PendingList pending={pending} onConfirm={onConfirm} onReject={onReject} accounts={accounts} />
-      </div>
+      <PendingList pending={pending} onConfirm={onConfirm} onReject={onReject} accounts={accounts} categories={categories} />
 
       {/* Loading */}
       {loading && (
-        <div className="flex justify-center py-16">
-          <div className="w-5 h-5 border-2 border-zinc-200 border-t-zinc-500 rounded-full animate-spin" />
+        <div style={{ display: 'flex', justifyContent: 'center', padding: '48px 0' }}>
+          <div style={{ width: 20, height: 20, borderRadius: '50%', border: `2px solid ${LG.sep}`, borderTopColor: LG.textSecondary, animation: 'spin 0.8s linear infinite' }} />
         </div>
       )}
 
-      {/* Empty state */}
-      {!loading && expenses.length === 0 && (
-        <div className="flex flex-col items-center justify-center py-20 px-5">
-          <div className="w-14 h-14 rounded-full bg-zinc-100 flex items-center justify-center mb-4">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#A1A1AA" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
-            </svg>
-          </div>
-          <p className="text-zinc-400 text-sm font-medium">Aucune dépense ce mois</p>
+      {/* Empty */}
+      {!loading && expenses.length === 0 && pending.length === 0 && (
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '64px 0' }}>
+          <p style={{ fontFamily: '-apple-system, system-ui', fontSize: 15, color: LG.textTertiary }}>
+            Aucune dépense ce mois
+          </p>
         </div>
       )}
 
       {/* Grouped expenses */}
-      {!loading && (
-        <div className="flex flex-col gap-5 px-5 mt-1">
-          {grouped.map(([date, exps]) => (
-            <div key={date}>
-              <p className="text-[10px] font-semibold text-zinc-400 uppercase tracking-widest mb-2 capitalize">
-                {formatDateGroup(date)}
-              </p>
-              <div className="bg-white rounded-2xl overflow-hidden shadow-[0_1px_4px_rgba(0,0,0,0.06)]">
-                {exps.map((exp, i) => (
-                  <div
-                    key={exp.id}
-                    className={`flex items-center gap-3 px-4 py-3.5 ${
-                      i !== exps.length - 1 ? 'border-b border-zinc-50' : ''
-                    }`}
-                  >
-                    <span
-                      className="w-1 h-9 rounded-full flex-shrink-0"
-                      style={{ backgroundColor: getCatColor(exp.category) }}
-                    />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold text-[#0A0A0A] truncate">
-                        {exp.note || getCatLabel(exp.category)}
-                      </p>
-                      <p className="text-[11px] text-zinc-400 mt-0.5">{getCatLabel(exp.category)}</p>
+      {!loading && grouped.map(([date, exps]) => (
+        <div key={date}>
+          <SectionHeader>{formatDateGroup(date)}</SectionHeader>
+          <div style={{ ...glassStyle(), borderRadius: 16, overflow: 'hidden', marginBottom: 8, position: 'relative' }}>
+            <Gleam />
+            {exps.map((exp, idx) => {
+              const cc = catColor(exp.category);
+              const acc = accounts.find(a => a.id === exp.account_id);
+              return (
+                <div key={exp.id} style={{
+                  display: 'flex', alignItems: 'center', gap: 10,
+                  padding: '11px 14px',
+                  borderBottom: idx < exps.length - 1 ? `1px solid ${LG.sep}` : 'none',
+                }}>
+                  {/* Category icon */}
+                  <div style={{
+                    width: 30, height: 30, borderRadius: 9, flexShrink: 0,
+                    background: `${cc}18`,
+                    border: `1px solid ${cc}33`,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  }}>
+                    <div style={{ width: 8, height: 8, borderRadius: 99, background: cc }} />
+                  </div>
+
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontFamily: '-apple-system, system-ui', fontSize: 15, fontWeight: 500, color: LG.textPrimary, letterSpacing: '-0.03em', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      {exp.note || getCatLabel(exp.category)}
                     </div>
-                    <div className="flex items-center gap-1">
-                      <span className="font-bold text-sm text-[#0A0A0A] tabular-nums">
-                        {exp.amount.toLocaleString('fr-FR')}
-                      </span>
-                      <button
-                        onClick={() => onDelete(exp.id)}
-                        className="text-zinc-300 hover:text-red-400 transition-colors duration-150 min-h-[44px] min-w-[36px] flex items-center justify-center cursor-pointer ml-1"
-                        aria-label="Supprimer"
-                      >
-                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                          <path d="M18 6L6 18M6 6l12 12"/>
-                        </svg>
-                      </button>
+                    <div style={{ fontFamily: '-apple-system, system-ui', fontSize: 12, color: LG.textSecondary, marginTop: 1, letterSpacing: '-0.01em' }}>
+                      {getCatLabel(exp.category)}{acc ? ` · ${acc.name}` : ''}
                     </div>
                   </div>
-                ))}
-              </div>
-            </div>
-          ))}
+
+                  <div style={{ fontFamily: 'DM Mono, monospace', fontSize: 15, fontWeight: 500, color: LG.textPrimary, flexShrink: 0 }}>
+                    −{exp.amount.toLocaleString('fr-FR')}
+                  </div>
+
+                  <button
+                    onClick={() => onDelete(exp.id)}
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.2)', fontSize: 18, padding: '2px 4px', WebkitTapHighlightColor: 'transparent', flexShrink: 0, fontFamily: 'system-ui', minHeight: 44, minWidth: 36, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                  >
+                    ×
+                  </button>
+                </div>
+              );
+            })}
+          </div>
         </div>
-      )}
+      ))}
+
+      <div style={{ height: 16 }} />
     </div>
   );
 }

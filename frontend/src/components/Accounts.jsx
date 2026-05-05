@@ -1,40 +1,32 @@
 import { useState } from 'react';
+import { LG, glassStyle, fmt } from '../styles/tokens';
+import { Gleam, GlassInput, GlassSelect, GlassButton } from './Glass';
 
 const ACCOUNT_TYPES = {
-  bank:         { label: 'Bancaire',     icon: '🏦' },
-  mobile_money: { label: 'Mobile Money', icon: '📱' },
-  cash:         { label: 'Espèces',      icon: '💵' },
-  other:        { label: 'Autre',        icon: '💳' },
+  bank:         'Bancaire',
+  mobile_money: 'Mobile Money',
+  cash:         'Espèces',
+  other:        'Autre',
 };
 
 const PRESET_COLORS = [
-  '#1D9E75', '#378ADD', '#D4537E', '#D85A30',
-  '#534AB7', '#F59E0B', '#0A0A0A', '#5F5E5A',
+  '#F97316','#14B8A6','#94A3B8','#60A5FA','#F472B6','#A78BFA',
 ];
 
-function fmt(n) {
-  return n.toLocaleString('fr-FR') + ' FCFA';
-}
-
-function fmtShort(n) {
-  return n.toLocaleString('fr-FR');
-}
-
-// ── Account Form ────────────────────────────────────────────────────────────
+// ── Account Form ────────────────────────────────────────────
 
 function AccountForm({ initial, onSave, onCancel }) {
-  const [name, setName]           = useState(initial?.name ?? '');
-  const [type, setType]           = useState(initial?.type ?? 'other');
-  const [balance, setBalance]     = useState(initial?.balance_initial ?? 0);
-  const [color, setColor]         = useState(initial?.color ?? '#378ADD');
-  const [saving, setSaving]       = useState(false);
-  const [error, setError]         = useState('');
+  const [name, setName]     = useState(initial?.name ?? '');
+  const [type, setType]     = useState(initial?.type ?? 'other');
+  const [balance, setBalance] = useState(initial?.balance_initial ?? 0);
+  const [color, setColor]   = useState(initial?.color ?? PRESET_COLORS[0]);
+  const [saving, setSaving] = useState(false);
+  const [error, setError]   = useState('');
 
   async function handleSubmit(e) {
     e.preventDefault();
     if (!name.trim()) { setError('Nom requis'); return; }
-    setSaving(true);
-    setError('');
+    setSaving(true); setError('');
     try {
       await onSave({ name: name.trim(), type, balance_initial: parseFloat(balance) || 0, color });
     } catch (e) {
@@ -45,115 +37,82 @@ function AccountForm({ initial, onSave, onCancel }) {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-4 px-5 py-5">
-      <div>
-        <p className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest mb-2">Nom du compte</p>
-        <input
-          type="text"
-          placeholder="ex: Orange Money, CCP, Espèces..."
-          value={name}
-          onChange={e => setName(e.target.value)}
-          className="w-full bg-white rounded-2xl px-4 py-3 text-sm text-[#0A0A0A] shadow-[0_1px_3px_rgba(0,0,0,0.07)] focus:outline-none focus:ring-2 focus:ring-[#0A0A0A] min-h-[46px] placeholder:text-zinc-300"
-          autoFocus
-        />
+    <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 10, padding: 14, borderRadius: 16, ...glassStyle(), position: 'relative', marginBottom: 12 }}>
+      <Gleam />
+      <div style={{ fontFamily: '-apple-system, system-ui', fontSize: 14, fontWeight: 600, color: LG.textPrimary, letterSpacing: '-0.03em' }}>
+        {initial ? 'Modifier le compte' : 'Nouveau compte'}
       </div>
+      <GlassInput value={name} onChange={e => setName(e.target.value)} placeholder="Nom…" />
 
-      <div>
-        <p className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest mb-2">Type</p>
-        <div className="grid grid-cols-2 gap-2">
-          {Object.entries(ACCOUNT_TYPES).map(([id, { label, icon }]) => (
-            <button
-              key={id}
-              type="button"
-              onClick={() => setType(id)}
-              className={`min-h-[46px] rounded-2xl px-3 py-2.5 text-sm font-semibold transition-all duration-150 cursor-pointer flex items-center gap-2 active:scale-[0.97] ${
-                type === id
-                  ? 'bg-[#0A0A0A] text-white shadow-lg'
-                  : 'bg-white text-zinc-700 shadow-[0_1px_3px_rgba(0,0,0,0.07)]'
-              }`}
-            >
-              <span>{icon}</span>{label}
+      {/* Type grid 2×2 */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+        {Object.entries(ACCOUNT_TYPES).map(([k, v]) => {
+          const sel = type === k;
+          return (
+            <button key={k} type="button" onClick={() => setType(k)} style={{
+              height: 44, borderRadius: 10,
+              background: sel ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.05)',
+              border: `1.5px solid ${sel ? 'rgba(255,255,255,0.25)' : 'rgba(255,255,255,0.08)'}`,
+              color: sel ? LG.textPrimary : LG.textSecondary,
+              fontFamily: '-apple-system, system-ui', fontSize: 13,
+              fontWeight: sel ? 600 : 400,
+              cursor: 'pointer', transition: 'all 150ms ease',
+              WebkitTapHighlightColor: 'transparent',
+              letterSpacing: '-0.02em',
+              position: 'relative', overflow: 'hidden',
+            }}>
+              {sel && <Gleam />}
+              {v}
             </button>
-          ))}
-        </div>
+          );
+        })}
       </div>
 
-      <div>
-        <p className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest mb-2">Solde actuel (FCFA)</p>
-        <input
-          type="number"
-          inputMode="numeric"
-          placeholder="0"
-          value={balance}
-          onChange={e => setBalance(e.target.value)}
-          className="w-full bg-white rounded-2xl px-4 py-3 text-sm text-[#0A0A0A] shadow-[0_1px_3px_rgba(0,0,0,0.07)] focus:outline-none focus:ring-2 focus:ring-[#0A0A0A] min-h-[46px] placeholder:text-zinc-300"
-        />
-        <p className="text-[10px] text-zinc-400 mt-1 px-1">Entrez le solde réel actuel — il sera conservé comme référence de départ.</p>
+      <GlassInput type="number" value={balance} onChange={e => setBalance(e.target.value)} placeholder="Solde initial (FCFA)…" />
+
+      {/* Color palette */}
+      <div style={{ display: 'flex', gap: 6, paddingTop: 2 }}>
+        {PRESET_COLORS.map(c => (
+          <button key={c} type="button" onClick={() => setColor(c)} style={{
+            width: 28, height: 28, borderRadius: 99, background: c, cursor: 'pointer', flexShrink: 0,
+            border: color === c ? '2.5px solid rgba(255,255,255,0.9)' : '2px solid transparent',
+            boxShadow: color === c ? `0 0 10px ${c}88` : 'none',
+            transition: 'all 150ms',
+          }} />
+        ))}
       </div>
 
-      <div>
-        <p className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest mb-2">Couleur</p>
-        <div className="flex gap-2 flex-wrap">
-          {PRESET_COLORS.map(c => (
-            <button
-              key={c}
-              type="button"
-              onClick={() => setColor(c)}
-              className={`w-8 h-8 rounded-full transition-all duration-150 cursor-pointer active:scale-90 ${
-                color === c ? 'ring-2 ring-offset-2 ring-[#0A0A0A] scale-110' : ''
-              }`}
-              style={{ backgroundColor: c }}
-            />
-          ))}
-        </div>
-      </div>
+      {error && <p style={{ color: LG.red, fontSize: 12, fontFamily: '-apple-system, system-ui' }}>{error}</p>}
 
-      {error && <p className="text-red-500 text-sm font-medium">{error}</p>}
-
-      <div className="flex gap-2 pt-1">
-        <button
-          type="submit"
-          disabled={saving}
-          className="flex-1 min-h-[50px] bg-[#0A0A0A] text-white rounded-2xl font-semibold text-sm disabled:opacity-40 cursor-pointer active:scale-[0.98] transition-all duration-150"
-        >
-          {saving ? 'Enregistrement...' : (initial ? 'Mettre à jour' : 'Créer le compte')}
-        </button>
-        <button
-          type="button"
-          onClick={onCancel}
-          className="min-h-[50px] px-5 bg-zinc-100 text-zinc-600 rounded-2xl font-semibold text-sm cursor-pointer active:scale-[0.98] transition-all duration-150"
-        >
-          Annuler
-        </button>
+      <div style={{ display: 'flex', gap: 8 }}>
+        <GlassButton label={saving ? '...' : (initial ? 'Mettre à jour' : 'Créer')} primary full style={{ flex: 1 }} onClick={handleSubmit} />
+        <GlassButton label="Annuler" full style={{ flex: 1 }} onClick={onCancel} />
       </div>
     </form>
   );
 }
 
-// ── Transfer Form ───────────────────────────────────────────────────────────
+// ── Transfer Form ────────────────────────────────────────────
 
 function TransferForm({ accounts, onSave, onCancel }) {
-  const [fromId, setFromId]   = useState(accounts[0]?.id ?? '');
-  const [toId, setToId]       = useState(accounts[1]?.id ?? accounts[0]?.id ?? '');
-  const [amount, setAmount]   = useState('');
-  const [note, setNote]       = useState('');
-  const [date, setDate]       = useState(new Date().toISOString().slice(0, 10));
-  const [saving, setSaving]   = useState(false);
-  const [error, setError]     = useState('');
+  const [fromId, setFromId] = useState(accounts[0]?.id ?? '');
+  const [toId, setToId]     = useState(accounts[1]?.id ?? accounts[0]?.id ?? '');
+  const [amount, setAmount] = useState('');
+  const [note, setNote]     = useState('');
+  const [date, setDate]     = useState(new Date().toISOString().slice(0, 10));
+  const [saving, setSaving] = useState(false);
+  const [error, setError]   = useState('');
 
   async function handleSubmit(e) {
     e.preventDefault();
     if (!amount || parseFloat(amount) <= 0) { setError('Montant requis'); return; }
     if (String(fromId) === String(toId)) { setError('Comptes différents requis'); return; }
-    setSaving(true);
-    setError('');
+    setSaving(true); setError('');
     try {
       await onSave({
-        from_account_id: Number(fromId),
-        to_account_id:   Number(toId),
-        amount:          parseFloat(amount),
-        note,
-        date:            new Date(date).toISOString(),
+        from_account_id: Number(fromId), to_account_id: Number(toId),
+        amount: parseFloat(amount), note,
+        date: new Date(date).toISOString(),
       });
     } catch (e) {
       setError(e.message);
@@ -162,313 +121,176 @@ function TransferForm({ accounts, onSave, onCancel }) {
     }
   }
 
-  const selectClass = "w-full border border-zinc-200 rounded-xl px-3 py-2.5 bg-white text-sm min-h-[46px] focus:outline-none focus:ring-2 focus:ring-[#0A0A0A] cursor-pointer";
-
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-4 px-5 py-5">
-      <div>
-        <p className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest mb-2">Depuis</p>
-        <select value={fromId} onChange={e => setFromId(e.target.value)} className={selectClass}>
-          {accounts.map(a => (
-            <option key={a.id} value={a.id}>{a.name} — {fmtShort(a.balance)} FCFA</option>
-          ))}
-        </select>
+    <div style={{ ...glassStyle(), borderRadius: 16, padding: 14, marginBottom: 10, position: 'relative' }}>
+      <Gleam />
+      <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
+        <GlassSelect value={fromId} onChange={e => setFromId(e.target.value)} style={{ flex: 1 }}>
+          {accounts.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
+        </GlassSelect>
+        <span style={{ color: LG.textSecondary, fontSize: 18, display: 'flex', alignItems: 'center' }}>→</span>
+        <GlassSelect value={toId} onChange={e => setToId(e.target.value)} style={{ flex: 1 }}>
+          {accounts.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
+        </GlassSelect>
       </div>
-
-      <div>
-        <p className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest mb-2">Vers</p>
-        <select value={toId} onChange={e => setToId(e.target.value)} className={selectClass}>
-          {accounts.map(a => (
-            <option key={a.id} value={a.id}>{a.name} — {fmtShort(a.balance)} FCFA</option>
-          ))}
-        </select>
-      </div>
-
-      <div>
-        <p className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest mb-2">Montant (FCFA)</p>
-        <input
-          type="number"
-          inputMode="numeric"
-          placeholder="0"
-          value={amount}
-          onChange={e => setAmount(e.target.value)}
-          className="w-full bg-white rounded-2xl px-4 py-3 text-sm text-[#0A0A0A] shadow-[0_1px_3px_rgba(0,0,0,0.07)] focus:outline-none focus:ring-2 focus:ring-[#0A0A0A] min-h-[46px] placeholder:text-zinc-300"
-        />
-      </div>
-
-      <div className="flex gap-3">
-        <div className="flex-1">
-          <p className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest mb-2">Note</p>
-          <input
-            type="text"
-            placeholder="ex: recharge OM"
-            value={note}
-            onChange={e => setNote(e.target.value)}
-            className="w-full bg-white rounded-2xl px-4 py-3 text-sm text-[#0A0A0A] shadow-[0_1px_3px_rgba(0,0,0,0.07)] focus:outline-none focus:ring-2 focus:ring-[#0A0A0A] min-h-[46px] placeholder:text-zinc-300"
-          />
-        </div>
-        <div>
-          <p className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest mb-2">Date</p>
-          <input
-            type="date"
-            value={date}
-            onChange={e => setDate(e.target.value)}
-            className="bg-white rounded-2xl px-3 py-3 text-sm text-[#0A0A0A] shadow-[0_1px_3px_rgba(0,0,0,0.07)] focus:outline-none focus:ring-2 focus:ring-[#0A0A0A] min-h-[46px]"
-          />
-        </div>
-      </div>
-
-      {error && <p className="text-red-500 text-sm font-medium">{error}</p>}
-
-      <div className="flex gap-2 pt-1">
-        <button
-          type="submit"
-          disabled={saving}
-          className="flex-1 min-h-[50px] bg-[#0A0A0A] text-white rounded-2xl font-semibold text-sm disabled:opacity-40 cursor-pointer active:scale-[0.98] transition-all duration-150"
-        >
-          {saving ? 'Enregistrement...' : 'Valider le virement'}
-        </button>
-        <button
-          type="button"
-          onClick={onCancel}
-          className="min-h-[50px] px-5 bg-zinc-100 text-zinc-600 rounded-2xl font-semibold text-sm cursor-pointer active:scale-[0.98] transition-all duration-150"
-        >
-          Annuler
-        </button>
-      </div>
-    </form>
-  );
-}
-
-// ── Account Card ────────────────────────────────────────────────────────────
-
-function AccountCard({ account, onEdit, onDelete }) {
-  const typeInfo = ACCOUNT_TYPES[account.type] || ACCOUNT_TYPES.other;
-  const isNegative = account.balance < 0;
-
-  return (
-    <div className="bg-white rounded-2xl overflow-hidden shadow-[0_1px_4px_rgba(0,0,0,0.07)] flex">
-      <div className="w-1 flex-shrink-0" style={{ backgroundColor: account.color }} />
-      <div className="flex-1 px-4 py-3.5 flex items-center gap-3">
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-1.5 mb-0.5">
-            <p className="text-sm font-bold text-[#0A0A0A] truncate">{account.name}</p>
-            <span className="text-[10px] text-zinc-400 flex-shrink-0">{typeInfo.icon} {typeInfo.label}</span>
-          </div>
-          <p className={`text-lg font-bold tabular-nums leading-none ${isNegative ? 'text-red-500' : 'text-[#0A0A0A]'}`}>
-            {fmtShort(account.balance)}
-            <span className="text-xs font-semibold text-zinc-400 ml-1">FCFA</span>
-          </p>
-        </div>
-        <div className="flex items-center gap-1 flex-shrink-0">
-          <button
-            onClick={() => onEdit(account)}
-            className="w-8 h-8 flex items-center justify-center text-zinc-400 hover:text-zinc-700 transition-colors cursor-pointer"
-            aria-label="Modifier"
-          >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/>
-              <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>
-            </svg>
-          </button>
-          <button
-            onClick={() => onDelete(account)}
-            className="w-8 h-8 flex items-center justify-center text-zinc-300 hover:text-red-400 transition-colors cursor-pointer"
-            aria-label="Supprimer"
-          >
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M18 6L6 18M6 6l12 12"/>
-            </svg>
-          </button>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        <GlassInput type="number" value={amount} onChange={e => setAmount(e.target.value)} placeholder="Montant (FCFA)…" />
+        <GlassInput value={note} onChange={e => setNote(e.target.value)} placeholder="Note (optionnel)…" />
+        <GlassInput type="date" value={date} onChange={e => setDate(e.target.value)} />
+        {error && <p style={{ color: LG.red, fontSize: 12, fontFamily: '-apple-system, system-ui' }}>{error}</p>}
+        <div style={{ display: 'flex', gap: 8 }}>
+          <GlassButton label={saving ? '...' : 'Valider'} primary full onClick={handleSubmit} style={{ flex: 1 }} />
+          <GlassButton label="Annuler" full onClick={onCancel} style={{ flex: 1 }} />
         </div>
       </div>
     </div>
   );
 }
 
-// ── Main Component ──────────────────────────────────────────────────────────
+// ── Main Component ───────────────────────────────────────────
 
 export default function Accounts({ accounts, transfers, loading, onAdd, onEdit, onDelete, onAddTransfer, onDeleteTransfer }) {
-  const [view, setView] = useState('list'); // 'list' | 'new-account' | 'edit-account' | 'new-transfer'
-  const [editingAccount, setEditingAccount] = useState(null);
-
-  const totalBalance = accounts.reduce((sum, a) => sum + a.balance, 0);
+  const [showAccountForm, setShowAccountForm]   = useState(false);
+  const [editingAccount, setEditingAccount]     = useState(null);
+  const [showTransferForm, setShowTransferForm] = useState(false);
 
   async function handleAddAccount(data) {
     await onAdd(data);
-    setView('list');
+    setShowAccountForm(false);
   }
 
   async function handleEditAccount(data) {
     await onEdit(editingAccount.id, data);
     setEditingAccount(null);
-    setView('list');
   }
 
   async function handleDeleteAccount(account) {
     if (!window.confirm(`Supprimer le compte "${account.name}" ?`)) return;
-    try {
-      await onDelete(account.id);
-    } catch (e) {
-      alert(e.message);
-    }
+    try { await onDelete(account.id); } catch (e) { alert(e.message); }
   }
 
   async function handleAddTransfer(data) {
     await onAddTransfer(data);
-    setView('list');
-  }
-
-  function startEdit(account) {
-    setEditingAccount(account);
-    setView('edit-account');
+    setShowTransferForm(false);
   }
 
   if (loading && accounts.length === 0) {
     return (
-      <div className="flex justify-center py-24">
-        <div className="w-5 h-5 border-2 border-zinc-200 border-t-zinc-500 rounded-full animate-spin" />
+      <div style={{ display: 'flex', justifyContent: 'center', padding: '64px 0' }}>
+        <div style={{ width: 20, height: 20, borderRadius: '50%', border: `2px solid ${LG.sep}`, borderTopColor: LG.textSecondary }} />
       </div>
     );
   }
 
-  if (view === 'new-account') {
-    return (
-      <div className="flex flex-col">
-        <div className="px-5 pt-5 pb-2">
-          <p className="text-[10px] font-semibold text-zinc-400 uppercase tracking-widest mb-1">Nouveau compte</p>
-          <p className="text-2xl font-bold text-[#0A0A0A]">Créer un compte</p>
-        </div>
-        <AccountForm onSave={handleAddAccount} onCancel={() => setView('list')} />
-      </div>
-    );
-  }
-
-  if (view === 'edit-account' && editingAccount) {
-    return (
-      <div className="flex flex-col">
-        <div className="px-5 pt-5 pb-2">
-          <p className="text-[10px] font-semibold text-zinc-400 uppercase tracking-widest mb-1">Modifier</p>
-          <p className="text-2xl font-bold text-[#0A0A0A]">{editingAccount.name}</p>
-        </div>
-        <AccountForm initial={editingAccount} onSave={handleEditAccount} onCancel={() => setView('list')} />
-      </div>
-    );
-  }
-
-  if (view === 'new-transfer') {
-    if (accounts.length < 2) {
-      setView('list');
-      return null;
-    }
-    return (
-      <div className="flex flex-col">
-        <div className="px-5 pt-5 pb-2">
-          <p className="text-[10px] font-semibold text-zinc-400 uppercase tracking-widest mb-1">Virement</p>
-          <p className="text-2xl font-bold text-[#0A0A0A]">Entre mes comptes</p>
-        </div>
-        <TransferForm accounts={accounts} onSave={handleAddTransfer} onCancel={() => setView('list')} />
-      </div>
-    );
-  }
-
-  // ── List view ──────────────────────────────────────────────────────────────
   return (
-    <div className="flex flex-col pb-6">
+    <div style={{ display: 'flex', flexDirection: 'column', padding: '0 16px' }}>
       {/* Header */}
-      <div className="px-5 pt-5 pb-4">
-        <p className="text-[10px] font-semibold text-zinc-400 uppercase tracking-widest mb-1">Mes comptes</p>
-        <div className="flex items-end justify-between mt-1">
-          <div>
-            <p className="text-[11px] text-zinc-400 mb-0.5">Total</p>
-            <p className={`text-3xl font-bold tabular-nums leading-none ${totalBalance < 0 ? 'text-red-500' : 'text-[#0A0A0A]'}`}>
-              {fmtShort(totalBalance)}
-              <span className="text-sm font-semibold text-zinc-400 ml-1.5">FCFA</span>
-            </p>
-          </div>
-          <div className="flex gap-2">
-            {accounts.length >= 2 && (
-              <button
-                onClick={() => setView('new-transfer')}
-                className="min-h-[38px] px-4 bg-zinc-100 text-zinc-700 rounded-xl text-xs font-semibold cursor-pointer active:scale-[0.97] transition-all duration-150 flex items-center gap-1.5"
-              >
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M7 16V4m0 0L3 8m4-4l4 4M17 8v12m0 0l4-4m-4 4l-4-4"/>
-                </svg>
-                Virement
-              </button>
-            )}
-            <button
-              onClick={() => setView('new-account')}
-              className="min-h-[38px] px-4 bg-[#0A0A0A] text-white rounded-xl text-xs font-semibold cursor-pointer active:scale-[0.97] transition-all duration-150 flex items-center gap-1.5"
-            >
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M12 5v14M5 12h14"/>
-              </svg>
-              Nouveau
-            </button>
-          </div>
-        </div>
+      <div style={{ display: 'flex', alignItems: 'center', padding: '12px 0 8px' }}>
+        <span style={{ fontFamily: '-apple-system, system-ui', fontSize: 20, fontWeight: 700, color: LG.textPrimary, flex: 1, letterSpacing: '-0.04em' }}>
+          Comptes
+        </span>
+        <GlassButton label="+ Compte" small onClick={() => { setShowAccountForm(v => !v); setEditingAccount(null); }} />
       </div>
 
-      {/* Account cards */}
+      {/* Add/Edit form */}
+      {showAccountForm && !editingAccount && (
+        <AccountForm onSave={handleAddAccount} onCancel={() => setShowAccountForm(false)} />
+      )}
+      {editingAccount && (
+        <AccountForm initial={editingAccount} onSave={handleEditAccount} onCancel={() => setEditingAccount(null)} />
+      )}
+
+      {/* Account cards — horizontal scroll */}
       {accounts.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-16 px-5">
-          <div className="w-14 h-14 rounded-full bg-zinc-100 flex items-center justify-center mb-4">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#A1A1AA" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-              <rect x="2" y="5" width="20" height="14" rx="2"/>
-              <path d="M2 10h20"/>
-            </svg>
-          </div>
-          <p className="text-zinc-400 text-sm font-medium text-center">Aucun compte</p>
-          <p className="text-zinc-300 text-xs mt-1 text-center">Créez vos comptes bancaires, Mobile Money, etc.</p>
+        <div style={{ textAlign: 'center', padding: '32px 0', fontFamily: '-apple-system, system-ui', fontSize: 14, color: LG.textTertiary }}>
+          Aucun compte — créez-en un
         </div>
       ) : (
-        <div className="flex flex-col gap-2.5 px-5">
-          {accounts.map(a => (
-            <AccountCard key={a.id} account={a} onEdit={startEdit} onDelete={handleDeleteAccount} />
+        <div style={{ display: 'flex', gap: 10, overflowX: 'auto', paddingBottom: 8, marginBottom: 4 }}>
+          {accounts.map(acc => (
+            <div key={acc.id} style={{
+              flexShrink: 0, width: 140, borderRadius: 16, padding: '14px',
+              background: `${acc.color}12`,
+              backdropFilter: 'blur(30px)', WebkitBackdropFilter: 'blur(30px)',
+              border: `1px solid ${acc.color}44`,
+              position: 'relative', overflow: 'hidden',
+              cursor: 'pointer',
+            }}>
+              <Gleam />
+              <div style={{ position: 'absolute', bottom: -10, right: -10, width: 50, height: 50, borderRadius: 99, background: `${acc.color}22`, filter: 'blur(15px)', pointerEvents: 'none' }} />
+              <div style={{ fontFamily: '-apple-system, system-ui', fontSize: 11, color: `${acc.color}cc`, marginBottom: 6, fontWeight: 500 }}>{acc.name}</div>
+              <div style={{ fontFamily: 'DM Mono, monospace', fontSize: 20, fontWeight: 600, color: LG.textPrimary, letterSpacing: '-0.02em' }}>
+                {(acc.balance ?? 0).toLocaleString('fr-FR')}
+              </div>
+              <div style={{ fontFamily: '-apple-system, system-ui', fontSize: 10, color: LG.textTertiary, marginTop: 4 }}>{ACCOUNT_TYPES[acc.type] || 'Autre'}</div>
+
+              {/* Edit/delete buttons */}
+              <div style={{ display: 'flex', gap: 4, marginTop: 8 }}>
+                <button onClick={() => setEditingAccount(acc)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.4)', fontSize: 11, fontFamily: '-apple-system, system-ui', padding: '2px 4px' }}>✎</button>
+                <button onClick={() => handleDeleteAccount(acc)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: `${LG.red}88`, fontSize: 11, fontFamily: '-apple-system, system-ui', padding: '2px 4px' }}>✕</button>
+              </div>
+            </div>
           ))}
         </div>
       )}
 
-      {/* Recent transfers */}
-      {transfers.length > 0 && (
-        <div className="px-5 mt-6">
-          <p className="text-[10px] font-semibold text-zinc-400 uppercase tracking-widest mb-3">Virements récents</p>
-          <div className="bg-white rounded-2xl overflow-hidden shadow-[0_1px_4px_rgba(0,0,0,0.06)]">
-            {transfers.slice(0, 10).map((t, i) => (
-              <div
-                key={t.id}
-                className={`flex items-center gap-3 px-4 py-3 ${i !== Math.min(transfers.length, 10) - 1 ? 'border-b border-zinc-50' : ''}`}
-              >
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold text-[#0A0A0A] truncate">
-                    {t.from_name} → {t.to_name}
-                  </p>
-                  {t.note && <p className="text-[11px] text-zinc-400 truncate mt-0.5">{t.note}</p>}
+      {/* Transfers section */}
+      <div style={{ display: 'flex', alignItems: 'center', padding: '8px 0 4px' }}>
+        <span style={{ fontFamily: '-apple-system, system-ui', fontSize: 15, fontWeight: 600, color: LG.textPrimary, flex: 1, letterSpacing: '-0.03em' }}>
+          Virements
+        </span>
+        {accounts.length >= 2 && (
+          <GlassButton label="+ Virement" small onClick={() => setShowTransferForm(v => !v)} />
+        )}
+      </div>
+
+      {showTransferForm && accounts.length >= 2 && (
+        <TransferForm accounts={accounts} onSave={handleAddTransfer} onCancel={() => setShowTransferForm(false)} />
+      )}
+
+      {/* Transfers list */}
+      <div style={{ ...glassStyle(), borderRadius: 16, overflow: 'hidden', position: 'relative' }}>
+        <Gleam />
+        {transfers.length === 0 ? (
+          <div style={{ padding: 20, textAlign: 'center', fontFamily: '-apple-system, system-ui', fontSize: 14, color: LG.textTertiary }}>
+            Aucun virement
+          </div>
+        ) : (
+          transfers.slice(0, 20).map((t, idx) => (
+            <div key={t.id} style={{
+              display: 'flex', alignItems: 'center', gap: 10,
+              padding: '11px 14px',
+              borderBottom: idx < Math.min(transfers.length, 20) - 1 ? `1px solid ${LG.sep}` : 'none',
+            }}>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontFamily: '-apple-system, system-ui', fontSize: 14, fontWeight: 500, color: LG.textPrimary, letterSpacing: '-0.03em' }}>
+                  {t.from_name} → {t.to_name}
                 </div>
-                <div className="flex items-center gap-1 flex-shrink-0">
-                  <span className="text-sm font-bold tabular-nums text-[#0A0A0A]">
-                    {fmtShort(t.amount)}
-                  </span>
-                  <button
-                    onClick={async () => {
-                      if (!window.confirm('Supprimer ce virement ?')) return;
-                      await onDeleteTransfer(t.id);
-                    }}
-                    className="w-8 h-8 flex items-center justify-center text-zinc-300 hover:text-red-400 transition-colors cursor-pointer ml-1"
-                    aria-label="Supprimer"
-                  >
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M18 6L6 18M6 6l12 12"/>
-                    </svg>
-                  </button>
+                {t.note && <div style={{ fontFamily: '-apple-system, system-ui', fontSize: 11, color: LG.textSecondary, marginTop: 1 }}>{t.note}</div>}
+              </div>
+              <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                <div style={{ fontFamily: 'DM Mono, monospace', fontSize: 14, fontWeight: 500, color: LG.tint }}>
+                  {fmt(t.amount)}
+                </div>
+                <div style={{ fontFamily: '-apple-system, system-ui', fontSize: 10, color: LG.textTertiary }}>
+                  {new Date(t.date).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' })}
                 </div>
               </div>
-            ))}
-          </div>
-        </div>
-      )}
+              <button
+                onClick={async () => {
+                  if (!window.confirm('Supprimer ce virement ?')) return;
+                  await onDeleteTransfer(t.id);
+                }}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.2)', fontSize: 16, padding: '2px 4px', WebkitTapHighlightColor: 'transparent', minHeight: 44, minWidth: 32, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+              >
+                ×
+              </button>
+            </div>
+          ))
+        )}
+      </div>
+
+      <div style={{ height: 16 }} />
     </div>
   );
 }

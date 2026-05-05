@@ -1,14 +1,34 @@
 const BASE = '/api';
 
+function getToken() {
+  return localStorage.getItem('token');
+}
+
 async function request(path, options = {}) {
-  const res = await fetch(`${BASE}${path}`, {
-    headers: { 'Content-Type': 'application/json', ...options.headers },
-    ...options,
-  });
+  const token = getToken();
+  const headers = { 'Content-Type': 'application/json', ...options.headers };
+  if (token) headers['Authorization'] = `Bearer ${token}`;
+
+  const res = await fetch(`${BASE}${path}`, { headers, ...options });
+
+  if (res.status === 401) {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    window.dispatchEvent(new Event('auth:logout'));
+    throw new Error('Session expirée');
+  }
+
   const data = await res.json();
   if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
   return data;
 }
+
+// Auth
+export const login = (username, password) =>
+  request('/auth/login', { method: 'POST', body: JSON.stringify({ username, password }) });
+
+export const register = (username, password) =>
+  request('/auth/register', { method: 'POST', body: JSON.stringify({ username, password }) });
 
 // Expenses
 export const getExpenses = (month) =>
@@ -55,3 +75,44 @@ export const createTransfer = (body) =>
 
 export const deleteTransfer = (id) =>
   request(`/accounts/transfers/${id}`, { method: 'DELETE' });
+
+// Categories
+export const getCategories = () => request('/categories');
+
+export const createCategory = (body) =>
+  request('/categories', { method: 'POST', body: JSON.stringify(body) });
+
+export const deleteCategory = (id) =>
+  request(`/categories/${id}`, { method: 'DELETE' });
+
+// Income
+export const getIncome = (month) =>
+  request(`/income${month ? `?month=${month}` : ''}`);
+
+export const getIncomeSummary = (month) =>
+  request(`/income/summary${month ? `?month=${month}` : ''}`);
+
+export const createIncome = (body) =>
+  request('/income', { method: 'POST', body: JSON.stringify(body) });
+
+export const deleteIncome = (id) =>
+  request(`/income/${id}`, { method: 'DELETE' });
+
+// Recurring
+export const getRecurring = (month) =>
+  request(`/recurring${month ? `?month=${month}` : ''}`);
+
+export const createRecurring = (body) =>
+  request('/recurring', { method: 'POST', body: JSON.stringify(body) });
+
+export const updateRecurring = (id, body) =>
+  request(`/recurring/${id}`, { method: 'PUT', body: JSON.stringify(body) });
+
+export const deleteRecurring = (id) =>
+  request(`/recurring/${id}`, { method: 'DELETE' });
+
+export const applyRecurring = (id, body) =>
+  request(`/recurring/${id}/apply`, { method: 'POST', body: JSON.stringify(body) });
+
+export const unapplyRecurring = (id, logId) =>
+  request(`/recurring/${id}/apply/${logId}`, { method: 'DELETE' });
