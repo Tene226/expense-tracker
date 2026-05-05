@@ -61,7 +61,7 @@ cp nginx/nginx-init.conf nginx/nginx.conf
 docker compose up -d nginx
 
 info "Acquisition du certificat Let's Encrypt..."
-docker compose run --rm certbot certonly \
+docker compose run --rm --entrypoint certbot certbot certonly \
     --webroot \
     --webroot-path=/var/www/certbot \
     --email "$EMAIL" \
